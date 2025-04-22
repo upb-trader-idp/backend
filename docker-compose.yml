@@ -1,0 +1,65 @@
+version: '3.9'
+
+services:
+  auth_service:
+    build: ./auth_service
+    ports:
+      - "8000:8000"
+    environment:
+      - JWT_SECRET=supersecret
+    depends_on:
+      - users_db
+    networks:
+      - auth_net
+
+  db_service:
+    build: ./db_service
+    ports:
+      - "8001:8001"
+    depends_on:
+      - trading_db
+    networks:
+      - trading_net
+
+  users_db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: users_db
+    volumes:
+      - users_data:/var/lib/postgresql/data
+      - ./init_db/init_users.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - auth_net
+
+  trading_db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: trading_db
+    volumes:
+      - trading_data:/var/lib/postgresql/data
+      - ./init_db/init_trading.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - trading_net
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    networks:
+      - auth_net
+      - trading_net
+
+volumes:
+  users_data:
+  trading_data:
+
+networks:
+  auth_net:
+  trading_net:
