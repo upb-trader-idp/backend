@@ -3,6 +3,8 @@ version: '3.9'
 services:
   auth_service:
     build: ./auth_service
+    image: trader_idp_auth_service
+    container_name: trader_idp_auth_service
     ports:
       - "8000:8000"
     environment:
@@ -14,6 +16,8 @@ services:
 
   db_service:
     build: ./db_service
+    image: trader_idp_db_service
+    container_name: trader_idp_db_service
     ports:
       - "8001:8001"
     depends_on:
