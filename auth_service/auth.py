@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from passlib.hash import bcrypt
 from jose import JWTError, jwt
@@ -8,6 +9,14 @@ from datetime import datetime, timedelta
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],    # FIXME
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # JWT
 SECRET_KEY = os.getenv("JWT_SECRET", "supersecret")
 ALGORITHM = "HS256"
@@ -15,7 +24,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 # DB connectionection
 def get_db():
-    return psycopg2.connectionect(
+    return psycopg2.connect(
         dbname="users_db",
         user="postgres",
         password="postgres",
