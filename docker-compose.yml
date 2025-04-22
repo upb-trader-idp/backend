@@ -8,6 +8,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - DATABASE_URL=postgresql://postgres:postgres@users_db:5432/users_db
       - JWT_SECRET=supersecret
     depends_on:
       - users_db
