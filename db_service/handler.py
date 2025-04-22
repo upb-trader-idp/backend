@@ -1,30 +1,33 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import psycopg2
-import os
+from sqlalchemy.orm import Session
+from models import Base, Trade as TradeModel
+from database import SessionLocal, engine
 
 app = FastAPI()
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],    # FIXME: Set to specific origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# DB connection
-def get_db():
-    return psycopg2.connect(
-        dbname="trading_db",
-        user="postgres",
-        password="postgres",
-        host="trading_db",
-        port="5432"
-    )
+# Create tables on startup
+Base.metadata.create_all(bind=engine)
 
-# Models
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Pydantic schema
 class Trade(BaseModel):
     username: str
     symbol: str
@@ -32,16 +35,11 @@ class Trade(BaseModel):
     price: float
     action: str  # "buy" or "sell"
 
-# Routes
+# Route
 @app.post("/trade")
-def save_trade(trade: Trade):
-    connection = get_db()
-    cursor = connection.cursor()
-    cursor.execute("""
-        INSERT INTO trades (username, symbol, quantity, price, action)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (trade.username, trade.symbol, trade.quantity, trade.price, trade.action))
-    connection.commit()
-    cursor.close()
-    connection.close()
-    return {"msg": "Trade saved"}
+def save_trade(trade: Trade, db: Session = Depends(get_db)):
+    new_trade = TradeModel(trade.model_dump())
+    db.add(new_trade)
+    db.commit()
+    db.refresh(new_trade)
+    return {"msg": "Trade saved", "trade_id": new_trade.id}
