@@ -15,4 +15,3 @@ class Trade(Base):
     action = Column(String, nullable=False)  # "buy" or "sell"
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     flag = Column(String, default="unprocessed")  
-    execute_at = Column(DateTime(timezone=True), nullable=True)

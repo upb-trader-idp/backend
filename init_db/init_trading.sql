@@ -6,6 +6,5 @@ CREATE TABLE IF NOT EXISTS trades (
     price FLOAT NOT NULL,
     action TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    flag TEXT DEFAULT 'unprocessed',
-    execute_at TIMESTAMPTZ
+    flag TEXT DEFAULT 'unprocessed'
 );

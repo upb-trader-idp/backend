@@ -2,10 +2,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import os
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+USERS_DB_URL = os.getenv("USERS_DB_URL")
 
-if not DATABASE_URL:
-    raise ValueError("[auth_service] DATABASE_URL environment variable is not set")
+if not USERS_DB_URL:
+    raise ValueError("[auth_service] USERS_DB_URL environment variable is not set")
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(USERS_DB_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
