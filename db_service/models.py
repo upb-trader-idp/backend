@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
+from datetime import datetime, timezone
 
 Base = declarative_base()
 
@@ -13,4 +13,5 @@ class Trade(Base):
     quantity = Column(Integer, nullable=False)
     price = Column(Float, nullable=False)
     action = Column(String, nullable=False)  # "buy" or "sell"
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    flag = Column(String, default="unprocessed")  
