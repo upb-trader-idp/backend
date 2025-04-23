@@ -61,6 +61,18 @@ services:
     networks:
       - database_net
 
+  business_logic_service:
+    build: ./business_logic_service
+    image: trader_idp_business_logic_service
+    container_name: trader_idp_business_logic_service
+    environment:
+      - USERS_DB_URL=postgresql://postgres:postgres@users_db:5432/users_db
+      - TRADING_DB_URL=postgresql://postgres:postgres@trading_db:5432/trading_db
+    depends_on:
+      - trading_db
+    networks:
+      - database_net
+
   adminer:
     image: adminer
     restart: always

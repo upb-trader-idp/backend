@@ -8,8 +8,9 @@ from decimal import Decimal
 import os
 
 from database import UsersSessionLocal, TradingSessionLocal
-from users_model import User
+from users_model import User, Portfolio
 from trades_model import Trade as TradeModel
+from typing import List
 
 app = FastAPI()
 
@@ -64,6 +65,11 @@ class Trade(BaseModel):
     action: str
     flag: str = "unprocessed"
 
+class PortfolioItem(BaseModel):
+    symbol: str
+    quantity: int
+    average_price: float
+
 
 # Balance endpoints
 @app.get("/get_balance")
@@ -93,6 +99,7 @@ def add_balance(update: BalanceUpdate, username: str = Depends(get_current_usern
     db.refresh(user)
 
     return {"msg": f"Balance updated", "new_balance": float(user.balance)}
+
 
 @app.post("/remove_balance")
 def remove_balance(update: BalanceUpdate, username: str = Depends(get_current_username), db: Session = Depends(get_users_db)):
@@ -124,3 +131,8 @@ def add_trade(trade: Trade, db: Session = Depends(get_trading_db), username: str
     db.refresh(new_trade)
 
     return {"msg": "Trade added", "trade_id": new_trade.id}
+
+
+@app.get("/get_portfolio", response_model=List[PortfolioItem])
+def get_portfolio(username: str = Depends(get_current_username), db: Session = Depends(get_users_db)):
+    return db.query(Portfolio).filter(Portfolio.username == username).all()
