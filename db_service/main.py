@@ -58,12 +58,12 @@ class Trade(BaseModel):
     flag: str = "unprocessed"
 
 #Routes
-@app.post("/trade")
-def save_trade(trade: Trade, db: Session = Depends(get_db), username: str = Depends(get_current_username)):
+@app.post("/add_trade")
+def add_trade(trade: Trade, db: Session = Depends(get_db), username: str = Depends(get_current_username)):
     new_trade = TradeModel(username=username, **trade.model_dump())
 
     db.add(new_trade)
     db.commit()
     db.refresh(new_trade)
-    
-    return {"msg": "Trade saved", "trade_id": new_trade.id}
+
+    return {"msg": "Trade added", "trade_id": new_trade.id}

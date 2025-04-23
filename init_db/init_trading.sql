@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS trades (
     quantity INT NOT NULL,
     price FLOAT NOT NULL,
     action TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     flag TEXT DEFAULT 'unprocessed',
+    execute_at TIMESTAMPTZ
 );

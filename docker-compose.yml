@@ -1,6 +1,35 @@
 version: '3.9'
 
 services:
+
+  users_db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: users_db
+    volumes:
+      - users_data:/var/lib/postgresql/data
+      - ./init_db/init_users.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - auth_net
+
+
+  trading_db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: trading_db
+    volumes:
+      - trading_data:/var/lib/postgresql/data
+      - ./init_db/init_trading.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - trading_net
+
+
   auth_service:
     build: ./auth_service
     image: trader_idp_auth_service
@@ -26,32 +55,6 @@ services:
       - JWT_SECRET=supersecret
     depends_on:
       - trading_db
-    networks:
-      - trading_net
-
-  users_db:
-    image: postgres:15
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: users_db
-    volumes:
-      - users_data:/var/lib/postgresql/data
-      - ./init_db/init_users.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - auth_net
-
-  trading_db:
-    image: postgres:15
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: trading_db
-    volumes:
-      - trading_data:/var/lib/postgresql/data
-      - ./init_db/init_trading.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - trading_net
 
