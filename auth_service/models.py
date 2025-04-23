@@ -11,3 +11,4 @@ class User(Base):
     password = Column(String, nullable=False)
     balance = Column(Numeric(12, 2), default=0.0)
     added_balance = Column(Numeric(12, 2), default=0.0)
+    blocked_balance = Column(Numeric(12, 2), default=0.0)
