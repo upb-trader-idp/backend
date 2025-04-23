@@ -75,6 +75,7 @@ def get_balance(username: str = Depends(get_current_username), db: Session = Dep
     
     return {"username": username, "balance": float(user.balance)}
 
+
 @app.post("/add_balance")
 def add_balance(update: BalanceUpdate, username: str = Depends(get_current_username), db: Session = Depends(get_users_db)):
     user = db.query(User).filter(User.username == username).first()
@@ -113,27 +114,6 @@ def remove_balance(update: BalanceUpdate, username: str = Depends(get_current_us
     return {"msg": f"Balance removed", "new_balance": float(user.balance)}
 
 
-@app.post("/block_balance")
-def block_balance(update: BalanceUpdate, username: str = Depends(get_current_username), db: Session = Depends(get_users_db)):
-    user = db.query(User).filter(User.username == username).first()
-
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    amount = Decimal(str(update.amount))
-
-    if user.balance < amount:
-        raise HTTPException(status_code=400, detail="Insufficient balance")
-    
-    user.balance -= amount
-    user.blocked_balance += amount
-
-    db.commit()
-    db.refresh(user)
-
-    return {"msg": f"Balance blocked", "new_balance": float(user.balance)}
-
-
 # Trade endpoint
 @app.post("/add_trade")
 def add_trade(trade: Trade, db: Session = Depends(get_trading_db), username: str = Depends(get_current_username)):
@@ -142,5 +122,5 @@ def add_trade(trade: Trade, db: Session = Depends(get_trading_db), username: str
     db.add(new_trade)
     db.commit()
     db.refresh(new_trade)
-    
+
     return {"msg": "Trade added", "trade_id": new_trade.id}
