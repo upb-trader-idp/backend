@@ -70,6 +70,7 @@ services:
       - TRADING_DB_URL=postgresql://postgres:postgres@trading_db:5432/trading_db
     depends_on:
       - trading_db
+      - users_db
     networks:
       - database_net
 

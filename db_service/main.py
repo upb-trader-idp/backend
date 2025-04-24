@@ -68,12 +68,14 @@ class Trade(BaseModel):
 class PortfolioItem(BaseModel):
     symbol: str
     quantity: int
-    average_price: float
+    price: float
 
 
 # Balance endpoints
 @app.get("/get_balance")
-def get_balance(username: str = Depends(get_current_username), db: Session = Depends(get_users_db)):
+def get_balance(username: str = Depends(get_current_username),
+                db: Session = Depends(get_users_db)):
+    
     user = db.query(User).filter(User.username == username).first()
 
     if not user:
@@ -83,7 +85,10 @@ def get_balance(username: str = Depends(get_current_username), db: Session = Dep
 
 
 @app.post("/add_balance")
-def add_balance(update: BalanceUpdate, username: str = Depends(get_current_username), db: Session = Depends(get_users_db)):
+def add_balance(update: BalanceUpdate,
+                username: str = Depends(get_current_username),
+                db: Session = Depends(get_users_db)):
+    
     user = db.query(User).filter(User.username == username).first()
 
     if not user:
@@ -102,7 +107,10 @@ def add_balance(update: BalanceUpdate, username: str = Depends(get_current_usern
 
 
 @app.post("/remove_balance")
-def remove_balance(update: BalanceUpdate, username: str = Depends(get_current_username), db: Session = Depends(get_users_db)):
+def remove_balance(update: BalanceUpdate,
+                   username: str = Depends(get_current_username),
+                   db: Session = Depends(get_users_db)):
+    
     user = db.query(User).filter(User.username == username).first()
 
     if not user:
@@ -123,16 +131,63 @@ def remove_balance(update: BalanceUpdate, username: str = Depends(get_current_us
 
 # Trade endpoint
 @app.post("/add_trade")
-def add_trade(trade: Trade, db: Session = Depends(get_trading_db), username: str = Depends(get_current_username)):
-    new_trade = TradeModel(username=username, **trade.model_dump())
+def add_trade(trade: Trade,
+              users_db: Session = Depends(get_users_db),
+              trading_db: Session = Depends(get_trading_db),
+              username: str = Depends(get_current_username)):
+    
+    
+    user = users_db.query(User).filter(User.username == username).first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-    db.add(new_trade)
-    db.commit()
-    db.refresh(new_trade)
+    total_cost = Decimal(str(trade.quantity * trade.price))
+
+    if trade.action == "buy":
+        if user.balance < total_cost:
+            raise HTTPException(status_code=400, detail="Insufficient balance for buy order")
+
+        user.balance -= total_cost 
+
+        users_db.commit()
+        users_db.refresh(user)
+
+
+    elif trade.action == "sell":
+        holding = users_db.query(Portfolio).filter(
+            Portfolio.username == username,
+            Portfolio.symbol == trade.symbol
+        ).first()
+
+        if not holding or holding.quantity < trade.quantity:
+            raise HTTPException(status_code=400, detail=f"Insufficient shares of {trade.symbol} to sell")
+
+        # Remove shares from portfolio
+        holding.quantity -= trade.quantity
+
+        if holding.quantity == 0:
+            users_db.delete(holding)
+
+        users_db.commit()
+        users_db.refresh(user)
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid trade action")
+    
+
+    new_trade = TradeModel(username=username, **trade.model_dump(exclude={"created_at"}))
+    trading_db.add(new_trade)
+    trading_db.commit()
+    trading_db.refresh(new_trade)
 
     return {"msg": "Trade added", "trade_id": new_trade.id}
 
 
 @app.get("/get_portfolio", response_model=List[PortfolioItem])
-def get_portfolio(username: str = Depends(get_current_username), db: Session = Depends(get_users_db)):
+def get_portfolio(username: str = Depends(get_current_username),
+                  db: Session = Depends(get_users_db)):
+    
     return db.query(Portfolio).filter(Portfolio.username == username).all()
+
+

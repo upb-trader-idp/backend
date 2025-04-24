@@ -12,7 +12,6 @@ class User(Base):
     balance = Column(Numeric(12, 2), default=0.0)
     added_balance = Column(Numeric(12, 2), default=0.0)
 
-
 class Portfolio(Base):
     __tablename__ = "portfolio"
 
