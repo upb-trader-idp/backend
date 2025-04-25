@@ -99,7 +99,7 @@ def add_balance(update: BalanceUpdate,
     except Exception as e:
         print(f"[db_interaction/add_balance] Commit failed: {e}")
         db.rollback()
-        
+
     db.refresh(user)
 
     return {"msg": f"Balance updated", "new_balance": float(user.balance)}
@@ -197,8 +197,14 @@ def add_trade(trade: Trade,
     
 
     new_trade = TradeModel(username=username, **trade.model_dump(exclude={"created_at"}))
-    main_db.add(new_trade)
-    main_db.commit()
+
+    try:
+        main_db.add(new_trade)
+        main_db.commit()
+    except Exception as e:
+        print(f"[db_interaction/add_trade] Commit failed: {e}")
+        main_db.rollback()
+        
     main_db.refresh(new_trade)
 
     return {"msg": "Trade added", "trade_id": new_trade.id}
