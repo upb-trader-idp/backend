@@ -1,6 +1,6 @@
 import time
 from sqlalchemy.orm import Session
-from database import TradingSessionLocal, UsersSessionLocal
+from database import SessionLocal
 from trades_model import Trade
 from users_model import User, Portfolio
 from decimal import Decimal
@@ -8,20 +8,19 @@ from decimal import Decimal
 SLEEP_TIME = 3 # seconds
 
 def match_trades():
-    users_db: Session = UsersSessionLocal()
-    trading_db: Session = TradingSessionLocal()
+    main_db: Session = SessionLocal()
 
     try:
 
         # Get all buy orders sorted by highest price and earliest time
-        buy_orders = trading_db.query(Trade).filter(
+        buy_orders = main_db.query(Trade).filter(
             Trade.flag == "unprocessed",
             Trade.action == "buy"
         ).order_by(Trade.price.desc(), Trade.created_at.asc()).all()
 
         for buy in buy_orders:
 
-            sell_orders = trading_db.query(Trade).filter(
+            sell_orders = main_db.query(Trade).filter(
                 Trade.flag == "unprocessed",
                 Trade.action == "sell",
                 Trade.symbol == buy.symbol,
@@ -46,15 +45,30 @@ def match_trades():
                 print(f"Matched {matched_qty} shares of {buy.symbol} at {match_price} for {total}")
 
                 # Update seller's balance
-                seller = users_db.query(User).filter(User.username == sell.username).first()
+                seller = main_db.query(User).filter(User.username == sell.username).first()
                 
                 if not seller:
                     raise Exception(f"Seller {sell.username} not found")
                 
                 seller.balance += total
 
+
+                # Credit the buyer's balance with the difference between the sell price and his asking price
+                buyer = main_db.query(User).filter(User.username == buy.username).first()
+
+                if not buyer:
+                    raise Exception(f"Buyer {buy.username} not found")
+                
+                original_total = Decimal(str(matched_qty)) * Decimal(str(buy.price))
+                refund = original_total - total
+
+                if refund > 0:
+                    print(f"Refunding {refund} to buyer {buy.username}")
+                    buyer.balance += refund
+
+
                 # Update buyer's portfolio
-                buyer_holding = users_db.query(Portfolio).filter_by(
+                buyer_holding = main_db.query(Portfolio).filter_by(
                     username=buy.username,
                     symbol=buy.symbol
                 ).first()
@@ -77,10 +91,10 @@ def match_trades():
 
                     print(f"New average price for {buyer_holding.symbol}: {new_price}")
                     try:
-                        users_db.commit()
+                        main_db.commit()
                     except Exception as e:
                         print(f"Commit failed: {e}")
-                        users_db.rollback()
+                        main_db.rollback()
     
                 else:
                     
@@ -92,14 +106,14 @@ def match_trades():
                         price=Decimal(str(match_price))
                     )
                     
-                    users_db.add(buyer_holding)
+                    main_db.add(buyer_holding)
                     try:
-                        users_db.commit()
+                        main_db.commit()
                     except Exception as e:
                         print(f"Commit failed: {e}")
-                        users_db.rollback()
+                        main_db.rollback()
 
-                    users_db.refresh(buyer_holding)
+                    main_db.refresh(buyer_holding)
 
                 # Update trades
                 buy.quantity -= matched_qty
@@ -112,13 +126,12 @@ def match_trades():
                     sell.flag = "executed"
 
                 # Commit changes
-                trading_db.commit()
+                main_db.commit()
 
     except Exception as e:
         print(f"Error in trade matching: {e}")
     finally:
-        trading_db.close()
-        users_db.close()
+        main_db.close()
     
 
 if __name__ == "__main__":

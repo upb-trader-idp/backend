@@ -22,11 +22,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# Create tables
-Base.metadata.create_all(bind=engine)
-
-
 # JWT config
 SECRET_KEY = os.getenv("JWT_SECRET")
 ALGORITHM = "HS256"
@@ -34,8 +29,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 
 # Dependency to get DB session
-def get_users_db():
+def get_main_db():
     db = SessionLocal()
+
     try:
         yield db
     finally:
@@ -63,7 +59,9 @@ def create_access_token(data: dict):
 
 # Routes
 @app.post("/register")
-def register(user: UserCreate, db: Session = Depends(get_users_db)):
+def register(user: UserCreate,
+             db: Session = Depends(get_main_db)):
+    
     existing_user = db.query(User).filter(User.username == user.username).first()
 
     if existing_user:
@@ -80,7 +78,9 @@ def register(user: UserCreate, db: Session = Depends(get_users_db)):
 
 
 @app.post("/login", response_model=Token)
-def login(user: UserCreate, db: Session = Depends(get_users_db)):
+def login(user: UserCreate,
+          db: Session = Depends(get_main_db)):
+    
     db_user = db.query(User).filter(User.username == user.username).first()
 
     if not db_user or not bcrypt.verify(user.password, db_user.password):

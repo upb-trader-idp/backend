@@ -2,33 +2,21 @@ version: '3.9'
 
 services:
 
-  users_db:
+  db_service:
     image: postgres:15
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: users_db
+      POSTGRES_DB: main_db
     volumes:
-      - users_data:/var/lib/postgresql/data
-      - ./init_db/init_users.sql:/docker-entrypoint-initdb.d/init.sql
+      - main_data:/var/lib/postgresql/data
+      - ./init_main_db.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - auth_net
-      - database_net
-
-
-  trading_db:
-    image: postgres:15
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: trading_db
-    volumes:
-      - trading_data:/var/lib/postgresql/data
-      - ./init_db/init_trading.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - database_net
+      - db_interaction_net
+      - business_logic_net
+      - adminer_net
 
 
   auth_service:
@@ -38,41 +26,40 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - USERS_DB_URL=postgresql://postgres:postgres@users_db:5432/users_db
+      - MAIN_DB_URL=postgresql://postgres:postgres@db_service:5432/main_db
       - JWT_SECRET=supersecret
     depends_on:
-      - users_db
+      - db_service
     networks:
       - auth_net
 
-  db_service:
-    build: ./db_service
-    image: trader_idp_db_service
-    container_name: trader_idp_db_service
+
+  db_interaction_service:
+    build: ./db_interaction_service
+    image: trader_idp_db_interaction_service
+    container_name: trader_idp_db_interaction_service
     ports:
       - "8001:8001"
     environment:
-      - USERS_DB_URL=postgresql://postgres:postgres@users_db:5432/users_db
-      - TRADING_DB_URL=postgresql://postgres:postgres@trading_db:5432/trading_db
+      - MAIN_DB_URL=postgresql://postgres:postgres@db_service:5432/main_db
       - JWT_SECRET=supersecret
     depends_on:
-      - trading_db
-      - users_db
+      - db_service
     networks:
-      - database_net
+      - db_interaction_net
 
   business_logic_service:
     build: ./business_logic_service
     image: trader_idp_business_logic_service
     container_name: trader_idp_business_logic_service
     environment:
-      - USERS_DB_URL=postgresql://postgres:postgres@users_db:5432/users_db
-      - TRADING_DB_URL=postgresql://postgres:postgres@trading_db:5432/trading_db
+      - MAIN_DB_URL=postgresql://postgres:postgres@db_service:5432/main_db
     depends_on:
-      - trading_db
-      - users_db
+      - db_service
+      - db_interaction_service
+      - auth_service
     networks:
-      - database_net
+      - business_logic_net
 
   adminer:
     image: adminer
@@ -80,12 +67,13 @@ services:
     ports:
       - "8080:8080"
     networks:
-      - database_net
+      - adminer_net
 
 volumes:
-  users_data:
-  trading_data:
+  main_data:
 
 networks:
   auth_net:
-  database_net:
+  db_interaction_net:
+  business_logic_net:
+  adminer_net:

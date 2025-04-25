@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from decimal import Decimal
 import os
 
-from database import UsersSessionLocal, TradingSessionLocal
+from database import SessionLocal
 from users_model import User, Portfolio
 from trades_model import Trade as TradeModel
 from typing import List
@@ -29,15 +29,9 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 # DB deps
-def get_users_db():
-    db = UsersSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def get_main_db():
+    db = SessionLocal()
 
-def get_trading_db():
-    db = TradingSessionLocal()
     try:
         yield db
     finally:
@@ -74,7 +68,7 @@ class PortfolioItem(BaseModel):
 # Balance endpoints
 @app.get("/get_balance")
 def get_balance(username: str = Depends(get_current_username),
-                db: Session = Depends(get_users_db)):
+                db: Session = Depends(get_main_db)):
     
     user = db.query(User).filter(User.username == username).first()
 
@@ -87,7 +81,7 @@ def get_balance(username: str = Depends(get_current_username),
 @app.post("/add_balance")
 def add_balance(update: BalanceUpdate,
                 username: str = Depends(get_current_username),
-                db: Session = Depends(get_users_db)):
+                db: Session = Depends(get_main_db)):
     
     user = db.query(User).filter(User.username == username).first()
 
@@ -109,7 +103,7 @@ def add_balance(update: BalanceUpdate,
 @app.post("/remove_balance")
 def remove_balance(update: BalanceUpdate,
                    username: str = Depends(get_current_username),
-                   db: Session = Depends(get_users_db)):
+                   db: Session = Depends(get_main_db)):
     
     user = db.query(User).filter(User.username == username).first()
 
@@ -132,12 +126,11 @@ def remove_balance(update: BalanceUpdate,
 # Trade endpoint
 @app.post("/add_trade")
 def add_trade(trade: Trade,
-              users_db: Session = Depends(get_users_db),
-              trading_db: Session = Depends(get_trading_db),
+              main_db: Session = Depends(get_main_db),
               username: str = Depends(get_current_username)):
     
     
-    user = users_db.query(User).filter(User.username == username).first()
+    user = main_db.query(User).filter(User.username == username).first()
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -150,12 +143,12 @@ def add_trade(trade: Trade,
 
         user.balance -= total_cost 
 
-        users_db.commit()
-        users_db.refresh(user)
+        main_db.commit()
+        main_db.refresh(user)
 
 
     elif trade.action == "sell":
-        holding = users_db.query(Portfolio).filter(
+        holding = main_db.query(Portfolio).filter(
             Portfolio.username == username,
             Portfolio.symbol == trade.symbol
         ).first()
@@ -167,26 +160,26 @@ def add_trade(trade: Trade,
         holding.quantity -= trade.quantity
 
         if holding.quantity == 0:
-            users_db.delete(holding)
+            main_db.delete(holding)
 
-        users_db.commit()
-        users_db.refresh(user)
+        main_db.commit()
+        main_db.refresh(user)
 
     else:
         raise HTTPException(status_code=400, detail="Invalid trade action")
     
 
     new_trade = TradeModel(username=username, **trade.model_dump(exclude={"created_at"}))
-    trading_db.add(new_trade)
-    trading_db.commit()
-    trading_db.refresh(new_trade)
+    main_db.add(new_trade)
+    main_db.commit()
+    main_db.refresh(new_trade)
 
     return {"msg": "Trade added", "trade_id": new_trade.id}
 
 
 @app.get("/get_portfolio", response_model=List[PortfolioItem])
 def get_portfolio(username: str = Depends(get_current_username),
-                  db: Session = Depends(get_users_db)):
+                  db: Session = Depends(get_main_db)):
     
     return db.query(Portfolio).filter(Portfolio.username == username).all()
 
