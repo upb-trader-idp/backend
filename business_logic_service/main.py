@@ -42,13 +42,11 @@ def match_trades():
                 total = Decimal(str(matched_qty)) * Decimal(str(match_price))
                 
 
-                print(f"Matched {matched_qty} shares of {buy.symbol} at {match_price} for {total}")
-
                 # Update seller's balance
                 seller = main_db.query(User).filter(User.username == sell.username).first()
                 
                 if not seller:
-                    raise Exception(f"Seller {sell.username} not found")
+                    raise Exception(f"[business_logic] Seller {sell.username} not found")
                 
                 seller.balance += total
 
@@ -57,13 +55,12 @@ def match_trades():
                 buyer = main_db.query(User).filter(User.username == buy.username).first()
 
                 if not buyer:
-                    raise Exception(f"Buyer {buy.username} not found")
+                    raise Exception(f"[business_logic] Buyer {buy.username} not found")
                 
                 original_total = Decimal(str(matched_qty)) * Decimal(str(buy.price))
                 refund = original_total - total
 
                 if refund > 0:
-                    print(f"Refunding {refund} to buyer {buy.username}")
                     buyer.balance += refund
 
 
@@ -82,23 +79,23 @@ def match_trades():
                             / Decimal(str(total_shares))
 
                         buyer_holding.price = new_price
+
                     except Exception as e:
-                        print(f"Error calculating new price: {e}")
+                        print(f"[business_logic] Error calculating new price: {e}")
                         continue
 
 
                     buyer_holding.quantity = total_shares
 
-                    print(f"New average price for {buyer_holding.symbol}: {new_price}")
                     try:
                         main_db.commit()
                     except Exception as e:
-                        print(f"Commit failed: {e}")
+                        print(f"[business_logic] Commit failed: {e}")
                         main_db.rollback()
     
                 else:
-                    
-                    print(f"Creating new portfolio for {buy.username}: {buy.symbol} - {matched_qty} shares at {match_price}")
+
+                    # Create a new portfolio entry for the buyer
                     buyer_holding = Portfolio(
                         username=buy.username,
                         symbol=buy.symbol,
@@ -106,11 +103,12 @@ def match_trades():
                         price=Decimal(str(match_price))
                     )
                     
-                    main_db.add(buyer_holding)
+                    # Add the new holding to the database
                     try:
+                        main_db.add(buyer_holding)
                         main_db.commit()
                     except Exception as e:
-                        print(f"Commit failed: {e}")
+                        print(f"[business_logic] Commit failed: {e}")
                         main_db.rollback()
 
                     main_db.refresh(buyer_holding)
@@ -129,7 +127,7 @@ def match_trades():
                 main_db.commit()
 
     except Exception as e:
-        print(f"Error in trade matching: {e}")
+        print(f"[business_logic] Error in trade matching: {e}")
     finally:
         main_db.close()
     

@@ -8,7 +8,7 @@ from passlib.hash import bcrypt
 from datetime import datetime, timedelta, timezone
 from users_model import Base, User
 from database import SessionLocal, engine
-from pydantic import BaseModel
+from schemas import UserCreate, Token
 import os
 
 
@@ -38,16 +38,6 @@ def get_main_db():
         db.close()
 
 
-# Pydantic Schemas
-class UserCreate(BaseModel):
-    username: str
-    password: str
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
 # JWT Helper
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -70,9 +60,16 @@ def register(user: UserCreate,
     hashed_pw = bcrypt.hash(user.password)
     new_user = User(username=user.username, password=hashed_pw)
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+
+    except Exception as e:
+        print(f"[auth/register] Commit failed: {e}")
+        db.rollback()
+
+        raise HTTPException(status_code=500, detail="Database error")
 
     return {"msg": f"User {user.username} created"}
 

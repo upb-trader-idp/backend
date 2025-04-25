@@ -94,7 +94,12 @@ def add_balance(update: BalanceUpdate,
     user.balance += Decimal(str(update.amount))
     user.added_balance += Decimal(str(update.amount))
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        print(f"[db_interaction/add_balance] Commit failed: {e}")
+        db.rollback()
+        
     db.refresh(user)
 
     return {"msg": f"Balance updated", "new_balance": float(user.balance)}
@@ -117,7 +122,13 @@ def remove_balance(update: BalanceUpdate,
     
     user.balance -= amount
 
-    db.commit()
+    try:
+        db.commit()
+
+    except Exception as e:
+        print(f"[db_interaction/remove_balance] Commit failed: {e}")
+        db.rollback()
+
     db.refresh(user)
 
     return {"msg": f"Balance removed", "new_balance": float(user.balance)}
@@ -142,8 +153,13 @@ def add_trade(trade: Trade,
             raise HTTPException(status_code=400, detail="Insufficient balance for buy order")
 
         user.balance -= total_cost 
+        
+        try:
+            main_db.commit()
+        except Exception as e:
+            print(f"[db_interaction/add_trade] Commit failed: {e}")
+            main_db.rollback()
 
-        main_db.commit()
         main_db.refresh(user)
 
 
@@ -160,9 +176,20 @@ def add_trade(trade: Trade,
         holding.quantity -= trade.quantity
 
         if holding.quantity == 0:
-            main_db.delete(holding)
+            try:
+                main_db.delete(holding)
 
-        main_db.commit()
+            except Exception as e:
+                print(f"[db_interaction/add_trade] Error deleting holding: {e}")
+                main_db.rollback()
+
+        try:
+            main_db.commit()
+
+        except Exception as e:
+            print(f"[db_interaction/add_trade] Commit failed: {e}")
+            main_db.rollback()
+
         main_db.refresh(user)
 
     else:
