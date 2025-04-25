@@ -20,7 +20,9 @@ services:
 
 
   auth_service:
-    build: ./auth_service
+    build:
+      context: .
+      dockerfile: ./auth_service/Dockerfile
     image: trader_idp_auth_service
     container_name: trader_idp_auth_service
     ports:
@@ -35,7 +37,9 @@ services:
 
 
   db_interaction_service:
-    build: ./db_interaction_service
+    build:
+      context: .
+      dockerfile: ./db_interaction_service/Dockerfile
     image: trader_idp_db_interaction_service
     container_name: trader_idp_db_interaction_service
     ports:
@@ -49,7 +53,9 @@ services:
       - db_interaction_net
 
   business_logic_service:
-    build: ./business_logic_service
+    build:
+      context: .
+      dockerfile: ./business_logic_service/Dockerfile
     image: trader_idp_business_logic_service
     container_name: trader_idp_business_logic_service
     environment:

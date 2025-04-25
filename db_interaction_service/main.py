@@ -3,13 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
 from decimal import Decimal
 import os
 
-from database import SessionLocal
-from users_model import User, Portfolio
-from trades_model import Trade as TradeModel
+from shared.database import SessionLocal
+from shared.models import User, Portfolio, Trade
+from shared.schemas import BalanceUpdate, PortfolioItem, TradeItem
 from typing import List
 
 app = FastAPI()
@@ -28,7 +27,7 @@ SECRET_KEY = os.getenv("JWT_SECRET")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-# DB deps
+
 def get_main_db():
     db = SessionLocal()
 
@@ -47,23 +46,7 @@ def get_current_username(credentials: HTTPAuthorizationCredentials = Security(se
         return payload.get("sub")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
-
-# Pydantic schemas
-class BalanceUpdate(BaseModel):
-    amount: float
-
-class Trade(BaseModel):
-    symbol: str
-    quantity: int
-    price: float
-    action: str
-    flag: str = "unprocessed"
-
-class PortfolioItem(BaseModel):
-    symbol: str
-    quantity: int
-    price: float
-
+    
 
 # Balance endpoints
 @app.get("/get_balance")
@@ -136,7 +119,7 @@ def remove_balance(update: BalanceUpdate,
 
 # Trade endpoint
 @app.post("/add_trade")
-def add_trade(trade: Trade,
+def add_trade(trade: TradeItem,
               main_db: Session = Depends(get_main_db),
               username: str = Depends(get_current_username)):
     
@@ -196,7 +179,7 @@ def add_trade(trade: Trade,
         raise HTTPException(status_code=400, detail="Invalid trade action")
     
 
-    new_trade = TradeModel(username=username, **trade.model_dump(exclude={"created_at"}))
+    new_trade = Trade(username=username, **trade.model_dump(exclude={"created_at"}))
 
     try:
         main_db.add(new_trade)

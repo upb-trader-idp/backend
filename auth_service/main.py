@@ -1,14 +1,12 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from fastapi import Security
-from jose import jwt, JWTError
+from jose import jwt
 from passlib.hash import bcrypt
 from datetime import datetime, timedelta, timezone
-from users_model import Base, User
-from database import SessionLocal, engine
-from schemas import UserCreate, Token
+from shared.models import User
+from shared.database import SessionLocal
+from shared.schemas import UserCreate, Token
 import os
 
 

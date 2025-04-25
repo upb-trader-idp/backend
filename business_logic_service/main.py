@@ -1,8 +1,7 @@
 import time
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from trades_model import Trade
-from users_model import User, Portfolio
+from shared.database import SessionLocal
+from shared.models import User, Portfolio, Trade
 from decimal import Decimal
 
 SLEEP_TIME = 3 # seconds

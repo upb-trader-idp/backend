@@ -2,7 +2,9 @@ FROM python:3.12-alpine
 
 WORKDIR /app
 
-COPY . .
+COPY ./db_interaction_service .
+
+COPY ./shared ./shared
 
 RUN pip install --no-cache-dir -r requirements.txt
 

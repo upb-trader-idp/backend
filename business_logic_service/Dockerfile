@@ -2,7 +2,9 @@ FROM python:3.12-alpine
 
 WORKDIR /app
 
-COPY . .
+COPY ./business_logic_service .
+
+COPY ./shared ./shared
 
 ENV PYTHONUNBUFFERED=1
 
