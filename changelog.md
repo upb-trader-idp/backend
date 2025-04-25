@@ -4,11 +4,13 @@
 
 ### Added
 - Completed the business_logic microservice
-- Exception handling
+- Extra exception handling
 
 ### Changed
 - Merged users_db and trading_db into a single database
 - Restructured networks in docker-compose
+- Reduced boilerplate: moved database.py, models.py, schemas.py into a "shared" folder,
+copied on the auth_service, business_logic_service, db_interaction_service containers
 
 ### Fixed
 - Refund bug in the business_logic microservice

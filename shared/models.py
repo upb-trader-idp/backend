@@ -21,7 +21,7 @@ class Portfolio(Base):
     username = Column(String, nullable=False)
     symbol = Column(String, nullable=False)
     quantity = Column(Integer, nullable=False)
-    price = Column(Numeric(12, 2), nullable=False)  # Price per share
+    price = Column(Numeric(12, 2), nullable=False)  # Average price per share
 
 
 class Trade(Base):
@@ -32,6 +32,6 @@ class Trade(Base):
     symbol = Column(String, nullable=False)
     quantity = Column(Integer, nullable=False)
     price = Column(Numeric(12, 2), nullable=False)
-    action = Column(String, nullable=False)  # "buy" or "sell"
+    action = Column(String, nullable=False)     # "buy" or "sell"
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     flag = Column(String, default="unprocessed")  
