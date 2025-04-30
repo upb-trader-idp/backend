@@ -75,6 +75,17 @@ services:
     networks:
       - adminer_net
 
+  finance_service:
+    build:
+      context: .
+      dockerfile: ./finance_service/Dockerfile
+    image: trader_idp_finance_service
+    container_name: trader_idp_finance_service
+    ports:
+      - "8002:8002"
+    networks:
+      - finance_net
+
 volumes:
   main_data:
 
@@ -83,3 +94,4 @@ networks:
   db_interaction_net:
   business_logic_net:
   adminer_net:
+  finance_net:

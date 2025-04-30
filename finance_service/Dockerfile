@@ -2,12 +2,12 @@ FROM python:3.12-alpine
 
 WORKDIR /app
 
-COPY ./business_logic_service .
+COPY ./finance_service .
 
 COPY ./shared ./shared
 
-ENV PYTHONUNBUFFERED=1
-
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python", "main.py"]
+EXPOSE 8002
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002"]
