@@ -1,11 +1,9 @@
-from fastapi import FastAPI, Depends, HTTPException, Security
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+from fastapi import FastAPI, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from decimal import Decimal
-import os
 from datetime import datetime, timezone
+from jose import jwt
+import os
 
 from shared.database import SessionLocal
 from shared.models import User, Portfolio, Trade
@@ -14,20 +12,9 @@ from typing import List
 
 app = FastAPI()
 
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # FIXME: Set to specific origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# JWT
+# JWT config
 SECRET_KEY = os.getenv("JWT_SECRET")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-
+ALGORITHM = os.getenv("JWT_ALGORITHM")
 
 def get_main_db():
     db = SessionLocal()
@@ -37,21 +24,19 @@ def get_main_db():
     finally:
         db.close()
 
-# JWT helper
-security = HTTPBearer()
 
-def get_current_username(credentials: HTTPAuthorizationCredentials = Security(security)):
+def get_sub_from_jwt(authorization: str = Header(...)) -> str:
     try:
-        token = credentials.credentials
+        token = authorization.split(" ")[1]
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("sub")
-    except JWTError:
+        return payload["sub"]
+    except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
     
 
 # Balance endpoints
 @app.get("/get_balance")
-def get_balance(username: str = Depends(get_current_username),
+def get_balance(username: str = Depends(get_sub_from_jwt),
                 db: Session = Depends(get_main_db)):
     
     user = db.query(User).filter(User.username == username).first()
@@ -64,7 +49,7 @@ def get_balance(username: str = Depends(get_current_username),
 
 @app.post("/add_balance")
 def add_balance(update: BalanceUpdate,
-                username: str = Depends(get_current_username),
+                username: str = Depends(get_sub_from_jwt),
                 db: Session = Depends(get_main_db)):
     
     user = db.query(User).filter(User.username == username).first()
@@ -91,7 +76,7 @@ def add_balance(update: BalanceUpdate,
 
 @app.post("/remove_balance")
 def remove_balance(update: BalanceUpdate,
-                   username: str = Depends(get_current_username),
+                   username: str = Depends(get_sub_from_jwt),
                    db: Session = Depends(get_main_db)):
     
     user = db.query(User).filter(User.username == username).first()
@@ -121,9 +106,8 @@ def remove_balance(update: BalanceUpdate,
 # Trade endpoint
 @app.post("/add_trade")
 def add_trade(trade: TradeItem,
-              main_db: Session = Depends(get_main_db),
-              username: str = Depends(get_current_username)):
-    
+              username: str = Depends(get_sub_from_jwt),
+              main_db: Session = Depends(get_main_db)):
     
     user = main_db.query(User).filter(User.username == username).first()
     
@@ -145,7 +129,6 @@ def add_trade(trade: TradeItem,
             main_db.rollback()
 
         main_db.refresh(user)
-
 
     elif trade.action == "sell":
         holding = main_db.query(Portfolio).filter(
@@ -197,7 +180,7 @@ def add_trade(trade: TradeItem,
 @app.put("/edit_trade/{trade_id}")
 def edit_trade(trade_id: int,
                update: TradeUpdate,
-               username: str = Depends(get_current_username),
+               username: str = Depends(get_sub_from_jwt),
                db: Session = Depends(get_main_db)):
     
     # Get the trade
@@ -215,33 +198,21 @@ def edit_trade(trade_id: int,
     
     try:
         if trade.action == "buy":
-
             user = db.query(User).filter(User.username == username).first()
             if not user:
                 raise HTTPException(status_code=404, detail="User not found")
             
-            if trade.price <= 0:
-                raise HTTPException(status_code=400, detail="Price must be positive")
-            
             # Calculate the difference in cost
             old_cost = Decimal(str(trade.quantity * trade.price))
-
-            # Calculate new cost based on what fields were updated
-            if update.quantity is not None and update.price is not None:
-                new_cost = Decimal(str(update.quantity * update.price))
-            elif update.quantity is not None:
-                new_cost = Decimal(str(update.quantity * trade.price))
-            elif update.price is not None:
-                new_cost = Decimal(str(trade.quantity * update.price))
-            else:
-                new_cost = old_cost
+            new_cost = Decimal(str(update.quantity * update.price)) if update.quantity is not None and update.price is not None else \
+                      Decimal(str(update.quantity * trade.price)) if update.quantity is not None else \
+                      Decimal(str(trade.quantity * update.price)) if update.price is not None else old_cost
             
             # If increasing cost, check if user has enough balance
             if new_cost > old_cost:
                 if user.balance < (new_cost - old_cost):
                     raise HTTPException(status_code=400, detail="Insufficient balance for trade modification")
                 user.balance -= (new_cost - old_cost)
-
             # If decreasing cost, refund the difference
             else:
                 user.balance += (old_cost - new_cost)
@@ -266,9 +237,6 @@ def edit_trade(trade_id: int,
             if not holding:
                 raise HTTPException(status_code=404, detail=f"No holding found for {trade.symbol}")
             
-            if update.quantity is not None and update.quantity <= 0:
-                raise HTTPException(status_code=400, detail="Quantity must be positive")
-            
             # Calculate the difference in quantity
             old_quantity = trade.quantity
             new_quantity = update.quantity if update.quantity is not None else old_quantity
@@ -278,10 +246,6 @@ def edit_trade(trade_id: int,
                 if holding.quantity < (new_quantity - old_quantity):
                     raise HTTPException(status_code=400, detail=f"Insufficient shares of {trade.symbol} to modify trade")
                 holding.quantity -= (new_quantity - old_quantity)
-
-                if holding.quantity == 0:
-                    db.delete(holding)
-                
             # If decreasing quantity, return the difference to portfolio
             else:
                 holding.quantity += (old_quantity - new_quantity)
@@ -292,7 +256,7 @@ def edit_trade(trade_id: int,
             if update.price is not None:
                 trade.price = Decimal(str(update.price))
             
-            # Update the trade's timestamp to now
+            # Update the timestamp
             trade.created_at = datetime.now(timezone.utc)
             
             db.commit()
@@ -300,15 +264,15 @@ def edit_trade(trade_id: int,
     except Exception as e:
         print(f"[db_interaction/edit_trade] Error: {e}")
         db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to update trade")
     
     return {"msg": "Trade updated successfully", "trade_id": trade.id}
 
 
-
 @app.delete("/delete_trade/{trade_id}")
 def delete_trade(trade_id: int,
-                username: str = Depends(get_current_username),
-                db: Session = Depends(get_main_db)):
+                 username: str = Depends(get_sub_from_jwt),
+                 db: Session = Depends(get_main_db)):
     
     # Get the trade
     trade = db.query(Trade).filter(
@@ -325,7 +289,6 @@ def delete_trade(trade_id: int,
     
     try:
         if trade.action == "buy":
-
             # Refund the user's balance
             user = db.query(User).filter(User.username == username).first()
             if not user:
@@ -335,7 +298,6 @@ def delete_trade(trade_id: int,
             user.balance += total_cost
             
         elif trade.action == "sell":
-
             # Return shares to portfolio
             holding = db.query(Portfolio).filter(
                 Portfolio.username == username,
@@ -345,15 +307,11 @@ def delete_trade(trade_id: int,
             if holding:
                 # Update existing holding
                 holding.quantity += trade.quantity
-
                 # Recalculate average price
                 total_value = (Decimal(str(holding.price)) * Decimal(str(holding.quantity - trade.quantity)) + 
                              Decimal(str(trade.price)) * Decimal(str(trade.quantity)))
-                
                 holding.price = total_value / Decimal(str(holding.quantity))
-
             else:
-                
                 # Create new holding
                 holding = Portfolio(
                     username=username,
@@ -361,7 +319,6 @@ def delete_trade(trade_id: int,
                     quantity=trade.quantity,
                     price=Decimal(str(trade.price))
                 )
-                
                 db.add(holding)
         
         # Delete the trade
@@ -371,12 +328,13 @@ def delete_trade(trade_id: int,
     except Exception as e:
         print(f"[db_interaction/delete_trade] Error: {e}")
         db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to delete trade")
     
     return {"msg": "Trade deleted successfully"}
 
 
 @app.get("/get_portfolio", response_model=List[PortfolioItem])
-def get_portfolio(username: str = Depends(get_current_username),
+def get_portfolio(username: str = Depends(get_sub_from_jwt),
                   db: Session = Depends(get_main_db)):
     
     return db.query(Portfolio).filter(Portfolio.username == username).all()

@@ -12,17 +12,9 @@ import os
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],    # FIXME: Set to specific origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # JWT config
 SECRET_KEY = os.getenv("JWT_SECRET")
-ALGORITHM = "HS256"
+ALGORITHM = os.getenv("JWT_ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 
@@ -37,12 +29,16 @@ def get_main_db():
 
 
 # JWT Helper
-def create_access_token(data: dict):
-    to_encode = data.copy()
+def create_access_token(username: str):
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    
+    to_encode = {
+        "sub": username,
+        "iss": "auth-service",
+        "exp": expire
+    }
+
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
     
 
 # Routes
@@ -81,6 +77,6 @@ def login(user: UserCreate,
     if not db_user or not bcrypt.verify(user.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    access_token = create_access_token(data={"sub": user.username})
+    access_token = create_access_token(user.username)
 
     return {"access_token": access_token, "token_type": "bearer"}

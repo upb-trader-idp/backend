@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 import yfinance as yf
 import pandas as pd
 
@@ -8,19 +7,10 @@ from typing import List
 
 app = FastAPI()
 
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # FIXME: Set to specific origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 @app.get("/stock/{symbol}", response_model=StockData)
 def get_stock_data(symbol: str):
-    
+
     try:
         stock = yf.Ticker(symbol)
         info = stock.info

@@ -1,0 +1,73 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: auth-service
+    url: http://auth_service:8000
+    routes:
+      - name: auth-route
+        paths: ["/login", "/register"]
+        methods: ["POST"]
+        strip_path: false
+
+  - name: db-interaction-service
+    url: http://db_interaction_service:8001
+    routes:
+      - name: db-interaction-route
+        paths: ["/get_balance", "/add_balance", "/remove_balance", "/add_trade", "/edit_trade", "/delete_trade", "/get_portfolio"]
+        methods: ["GET", "POST", "PUT", "DELETE"]
+        strip_path: false
+
+  - name: finance-service
+    url: http://finance_service:8002
+    routes:
+      - name: finance-route
+        paths: ["/stock"]
+        methods: ["GET"]
+        strip_path: false
+
+plugins:
+  - name: jwt
+    service: db-interaction-service
+    config:
+      key_claim_name: iss
+      claims_to_verify: [exp]
+      secret_is_base64: false
+      maximum_expiration: 3600
+
+  - name: cors
+    service: auth-service
+    config:
+      origins: ["*"]
+      methods: ["POST"]
+      headers: ["Accept", "Content-Type"]
+      credentials: true
+      max_age: 3600
+    enabled: true
+
+  - name: cors
+    service: db-interaction-service
+    config:
+      origins: ["*"]
+      methods: ["GET", "POST", "PUT", "DELETE"]
+      headers: ["Accept", "Authorization", "Content-Type", "X-Authenticated-Userid"]
+      credentials: true
+      max_age: 3600
+    enabled: true
+
+  - name: cors
+    service: finance-service
+    config:
+      origins: ["*"]
+      methods: ["GET"]
+      headers: ["Accept", "Content-Type"]
+      credentials: true
+      max_age: 3600
+    enabled: true
+
+consumers:
+  - username: auth-service
+    jwt_secrets:
+      - algorithm: HS256
+        key: auth-service
+        secret: supersecret
