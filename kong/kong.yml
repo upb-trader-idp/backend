@@ -3,7 +3,7 @@ _transform: true
 
 services:
   - name: auth-service
-    url: http://auth_service:8000
+    url: http://auth_service:8002
     routes:
       - name: auth-route
         paths: ["/login", "/register"]
@@ -11,7 +11,7 @@ services:
         strip_path: false
 
   - name: db-interaction-service
-    url: http://db_interaction_service:8001
+    url: http://db_interaction_service:8003
     routes:
       - name: db-interaction-route
         paths: ["/get_balance", "/add_balance", "/remove_balance", "/add_trade", "/edit_trade", "/delete_trade", "/get_portfolio"]
@@ -19,7 +19,7 @@ services:
         strip_path: false
 
   - name: finance-service
-    url: http://finance_service:8002
+    url: http://finance_service:8004
     routes:
       - name: finance-route
         paths: ["/stock"]

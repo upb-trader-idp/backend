@@ -1,4 +1,3 @@
-version: '3.9'
 
 services:
 
@@ -16,9 +15,9 @@ services:
     volumes:
       - ./kong/kong.yml:/etc/kong/kong.yml
     ports:
-      - "8003:8000"  # Proxy port
+      - "8000:8000"  # Proxy port
       - "8443:8443"  # SSL proxy port
-      - "8004:8001"  # Admin API port
+      - "8001:8001"  # Admin API port
       - "8444:8444"  # SSL Admin API port
     networks:
       - kong_net
@@ -54,7 +53,7 @@ services:
     image: trader_idp_auth_service
     container_name: trader_idp_auth_service
     ports:
-      - "8000:8000"
+      - "8002:8002"
     environment:
       - MAIN_DB_URL=postgresql://postgres:postgres@db_service:5432/main_db
       - JWT_SECRET=supersecret
@@ -72,7 +71,7 @@ services:
     image: trader_idp_db_interaction_service
     container_name: trader_idp_db_interaction_service
     ports:
-      - "8001:8001"
+      - "8003:8003"
     environment:
       - MAIN_DB_URL=postgresql://postgres:postgres@db_service:5432/main_db
       - JWT_SECRET=supersecret
@@ -113,7 +112,7 @@ services:
     image: trader_idp_finance_service
     container_name: trader_idp_finance_service
     ports:
-      - "8002:8002"
+      - "8004:8004"
     networks:
       - finance_net
 
