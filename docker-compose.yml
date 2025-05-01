@@ -162,10 +162,23 @@ services:
       - finance_net
       - monitoring_net
 
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: trader_idp_portainer
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - monitoring_net
+    restart: unless-stopped
+
 volumes:
   main_data:
   prometheus_data:
   grafana_data:
+  portainer_data:
 
 networks:
   auth_net:
