@@ -105,8 +105,6 @@ services:
       - monitoring_net
     deploy:
       replicas: 3
-      placement:
-        constraints: [node.labels.service == auth]
 
   db_interaction_service:
     image: alexlicuriceanu/trader_idp_db_interaction_service:latest
@@ -121,8 +119,6 @@ services:
       - monitoring_net
     deploy:
       replicas: 3
-      placement:
-        constraints: [node.labels.service == db]
 
   business_logic_service:
     image: alexlicuriceanu/trader_idp_business_logic_service:latest
@@ -133,8 +129,6 @@ services:
       - monitoring_net
     deploy:
       replicas: 1
-      placement:
-        constraints: [node.labels.service == logic]
 
   finance_service:
     image: alexlicuriceanu/trader_idp_finance_service:latest
@@ -145,8 +139,6 @@ services:
       - monitoring_net
     deploy:
       replicas: 1
-      placement:
-        constraints: [node.labels.service == finance]
 
   adminer:
     image: adminer
