@@ -138,7 +138,7 @@ services:
       - finance_net
       - monitoring_net
     deploy:
-      replicas: 1
+      replicas: 3
 
   adminer:
     image: adminer
