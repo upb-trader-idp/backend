@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.1.1] - 01/05/2025
+
+### Added
+- Prometheus
+- Grafana
+- Portainer
+
+
+## [0.1.0] - 30/04/2025
+
+### Added
+- Kong for API routes, JWT, CORS
+- Added finance_service
+- Added delete_trade, edit_trade endpoints
+
+### Changed
+- All container ports
+
+
 ## [0.0.5] - 24/04/2025
 
 ### Added
@@ -19,7 +38,6 @@ copied on the auth_service, business_logic_service, db_interaction_service conta
 - One of the two Postgres microservices
 
 
-
 ## [0.0.4] - 24/04/2025
 
 ### Added
@@ -28,7 +46,6 @@ copied on the auth_service, business_logic_service, db_interaction_service conta
 
 ### Removed 
 - blocked_balance endpoint and blocked_balance field
-
 
 
 ## [0.0.3] - 23/04/2025
@@ -42,7 +59,6 @@ copied on the auth_service, business_logic_service, db_interaction_service conta
 - Split database in users_db and trading_db
 
 
-
 ## [0.0.2] - 23/04/2025
 
 ### Added
@@ -52,7 +68,6 @@ copied on the auth_service, business_logic_service, db_interaction_service conta
 
 ### Changed
 - Standardized file names, docker image names 
-
 
 
 ## [0.0.1] - 22/04/2025
