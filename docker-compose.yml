@@ -1,3 +1,4 @@
+version: '3.8'
 
 services:
 
@@ -12,6 +13,7 @@ services:
       - KONG_PROXY_ERROR_LOG=/dev/stderr
       - KONG_ADMIN_ERROR_LOG=/dev/stderr
       - KONG_ADMIN_LISTEN=0.0.0.0:8001
+      - KONG_PLUGINS=bundled,prometheus
     volumes:
       - ./kong/kong.yml:/etc/kong/kong.yml
     ports:
@@ -24,10 +26,50 @@ services:
       - auth_net
       - db_interaction_net
       - finance_net
+      - monitoring_net
     depends_on:
       - auth_service
       - db_interaction_service
       - finance_service
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: trader_idp_prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring_net
+      - kong_net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: trader_idp_grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_DASHBOARDS_MIN_REFRESH_INTERVAL=5s
+      - GF_PROVISIONING_CONFIG_ENABLED=true
+      - GF_PROVISIONING_DASHBOARDS_DEFAULT_DATA_SOURCE=Prometheus
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring_net
+    depends_on:
+      - prometheus
+    restart: unless-stopped
 
   db_service:
     image: postgres:15
@@ -62,6 +104,7 @@ services:
       - db_service
     networks:
       - auth_net
+      - monitoring_net
 
 
   db_interaction_service:
@@ -80,6 +123,7 @@ services:
       - db_service
     networks:
       - db_interaction_net
+      - monitoring_net
 
   business_logic_service:
     build:
@@ -95,6 +139,7 @@ services:
       - auth_service
     networks:
       - business_logic_net
+      - monitoring_net
 
   adminer:
     image: adminer
@@ -115,9 +160,12 @@ services:
       - "8004:8004"
     networks:
       - finance_net
+      - monitoring_net
 
 volumes:
   main_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   auth_net:
@@ -126,3 +174,4 @@ networks:
   adminer_net:
   finance_net:
   kong_net:
+  monitoring_net:

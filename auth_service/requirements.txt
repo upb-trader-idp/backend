@@ -4,3 +4,4 @@ python-jose[cryptography]
 passlib
 psycopg2-binary
 sqlalchemy
+prometheus-client

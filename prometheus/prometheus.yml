@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'kong'
+    static_configs:
+      - targets: ['kong:8001']
+
+  - job_name: 'auth_service'
+    static_configs:
+      - targets: ['auth_service:8002']
+
+  - job_name: 'db_interaction_service'
+    static_configs:
+      - targets: ['db_interaction_service:8003']
+
+  - job_name: 'finance_service'
+    static_configs:
+      - targets: ['finance_service:8004'] 

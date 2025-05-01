@@ -1,11 +1,51 @@
 from fastapi import FastAPI, HTTPException
 import yfinance as yf
 import pandas as pd
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from starlette.responses import Response
+from time import time
 
 from shared.schemas import StockData, HistoricalData
 from typing import List
 
 app = FastAPI()
+
+# Prometheus metrics
+REQUEST_COUNT = Counter(
+    'finance_service_requests_total',
+    'Total number of requests',
+    ['method', 'endpoint', 'status']
+)
+
+REQUEST_LATENCY = Histogram(
+    'finance_service_request_latency_seconds',
+    'Request latency in seconds',
+    ['method', 'endpoint']
+)
+
+# Middleware to track metrics
+@app.middleware("http")
+async def track_metrics(request, call_next):
+    start_time = time()
+    method = request.method
+    endpoint = request.url.path
+
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        REQUEST_COUNT.labels(method=method, endpoint=endpoint, status=status_code).inc()
+        REQUEST_LATENCY.labels(method=method, endpoint=endpoint).observe(time() - start_time)
+        return response
+    except Exception as e:
+        REQUEST_COUNT.labels(method=method, endpoint=endpoint, status=500).inc()
+        REQUEST_LATENCY.labels(method=method, endpoint=endpoint).observe(time() - start_time)
+        raise e
+
+
+# Metrics endpoint
+@app.get("/metrics")
+async def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/stock/{symbol}", response_model=StockData)
