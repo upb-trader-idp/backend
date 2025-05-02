@@ -27,7 +27,7 @@ docker stack deploy -c stack.yml trader_idp
 <br/>
 
 - **Business Logic microservices**:
-    - "business_logic_service" - handles matching buy orders with sell order and the transfer of money or stocks between the buyer and the seller.
+    - "business_logic_service" - handles matching buy orders with sell orders and the transfer of money or stocks between the buyer and the seller.
     - "finance_service" - API used for fetching data about stocks from external sources (yfinance). Exposes the endpoints:
         - *GET* /stock/{symbol}
         - *GET* /stock/{symbol}/history
