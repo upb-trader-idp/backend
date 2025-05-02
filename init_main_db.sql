@@ -22,5 +22,6 @@ CREATE TABLE IF NOT EXISTS trades (
     price FLOAT NOT NULL,
     action TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    flag TEXT DEFAULT 'unprocessed'
+    flag TEXT DEFAULT 'unprocessed',
+    portfolio_price NUMERIC(12, 2) DEFAULT -1.0
 );

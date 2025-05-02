@@ -157,6 +157,8 @@ def add_trade(trade: TradeItem,
 
     total_cost = Decimal(str(trade.quantity * trade.price))
 
+    portfolio_price = Decimal("-1")
+
     if trade.action == "buy":
         if user.balance < total_cost:
             raise HTTPException(status_code=400, detail="Insufficient balance for buy order")
@@ -182,6 +184,7 @@ def add_trade(trade: TradeItem,
 
         # Remove shares from portfolio
         holding.quantity -= trade.quantity
+        portfolio_price = holding.price
 
         if holding.quantity == 0:
             try:
@@ -204,7 +207,9 @@ def add_trade(trade: TradeItem,
         raise HTTPException(status_code=400, detail="Invalid trade action")
     
 
-    new_trade = Trade(username=username, **trade.model_dump(exclude={"created_at"}))
+    new_trade = Trade(username=username,
+                      portfolio_price=portfolio_price,
+                      **trade.model_dump(exclude={"created_at"}))
 
     try:
         main_db.add(new_trade)
@@ -339,28 +344,38 @@ def delete_trade(trade_id: int,
             user.balance += total_cost
             
         elif trade.action == "sell":
-            # Return shares to portfolio
             holding = db.query(Portfolio).filter(
                 Portfolio.username == username,
                 Portfolio.symbol == trade.symbol
             ).first()
-            
+
             if holding:
                 # Update existing holding
-                holding.quantity += trade.quantity
-                # Recalculate average price
-                total_value = (Decimal(str(holding.price)) * Decimal(str(holding.quantity - trade.quantity)) + 
-                             Decimal(str(trade.price)) * Decimal(str(trade.quantity)))
-                holding.price = total_value / Decimal(str(holding.quantity))
+                old_quantity = holding.quantity
+                total_quantity = old_quantity + trade.quantity
+
+                # Use the stored original price from when the shares were removed
+                if trade.portfolio_price <= 0:
+                    trade_price = trade.price  # fallback
+                else:
+                    trade_price = trade.portfolio_price
+
+                holding.price = (
+                    (holding.price * old_quantity + trade_price * trade.quantity)
+                    / total_quantity
+                )
+                holding.quantity = total_quantity
+
             else:
                 # Create new holding
                 holding = Portfolio(
                     username=username,
                     symbol=trade.symbol,
                     quantity=trade.quantity,
-                    price=Decimal(str(trade.price))
+                    price=trade.portfolio_price if trade.portfolio_price > 0 else trade.price
                 )
                 db.add(holding)
+
         
         # Delete the trade
         db.delete(trade)

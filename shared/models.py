@@ -34,4 +34,5 @@ class Trade(Base):
     price = Column(Numeric(12, 2), nullable=False)
     action = Column(String, nullable=False)     # "buy" or "sell"
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    flag = Column(String, default="unprocessed")  
+    flag = Column(String, default="unprocessed") 
+    portfolio_price = Column(Numeric(12, 2), nullable=False)
