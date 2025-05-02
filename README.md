@@ -88,3 +88,5 @@ docker stack deploy -c stack.yml trader_idp
         - *username*: postgres
         - *password*: postgres
         - *database*: main_db
+
+https://hub.docker.com/repositories/alexlicuriceanu
