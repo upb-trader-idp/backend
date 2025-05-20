@@ -66,6 +66,7 @@ docker stack deploy -c stack.yml trader_idp
     - *Adminer*: 8080
     - *Prometheus*: 9090
     - *Grafana*: 3000
+    - *Portainer*: 9000
 <br/>
 
 - **Networks**
